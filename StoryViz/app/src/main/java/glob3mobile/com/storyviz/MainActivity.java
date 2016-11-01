@@ -2,13 +2,17 @@ package glob3mobile.com.storyviz;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.media.ExifInterface;
+import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
@@ -91,6 +95,37 @@ public class MainActivity extends Activity {
         startActivity(intent);
     }
 
+    public int getCameraPhotoOrientation(Context context, String imagePath) {
+
+        int rotate = 0;
+        try {
+            context.getContentResolver().notifyChange(Uri.fromFile(new File(imagePath)), null);
+            File imageFile = new File(imagePath);
+
+            ExifInterface exif = new ExifInterface(imageFile.getAbsolutePath());
+            int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+
+            switch (orientation) {
+                case ExifInterface.ORIENTATION_ROTATE_270:
+                    rotate = 270;
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_180:
+                    rotate = 180;
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_90:
+                    rotate = 90;
+                    break;
+            }
+
+            Log.i("RotateImage", "Exif orientation: " + orientation);
+            Log.i("RotateImage", "Rotate value: " + rotate);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return rotate;
+    }
+
+
     private ArrayList<Photo> getCandidateImagery(Calendar calFrom, Calendar calTo) throws ImageProcessingException, IOException {
         ArrayList<Photo> candidateImages = new ArrayList<>();
 
@@ -116,6 +151,8 @@ public class MainActivity extends Activity {
                 ExifSubIFDDirectory directory
                         = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
                 GpsDirectory gpsDirectory = metadata.getFirstDirectoryOfType(GpsDirectory.class);
+
+
                 if (directory != null) {
                     Date date = directory.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
                     if (date != null) {
@@ -123,15 +160,16 @@ public class MainActivity extends Activity {
                         photoCalendar.setTime(date);
 
                         if (photoCalendar.after(calFrom) && photoCalendar.before(calTo)) {
-
+                            Photo photo = new Photo();
                             if (gpsDirectory != null) {
-                                Photo photo = new Photo();
                                 photo.setPath(jpegFile.getAbsolutePath());
                                 photo.setDate(photoCalendar);
                                 GeoLocation geoPosition = gpsDirectory.getGeoLocation();
                                 photo.setPosition(Geodetic3D.fromDegrees(geoPosition.getLatitude(), geoPosition.getLongitude(), 0));
+                                photo.setExifOrientation(getCameraPhotoOrientation(MainActivity.this, jpegFile.getAbsolutePath()));
                                 candidateImages.add(photo);
                             }
+
                         }
                     }
                 }

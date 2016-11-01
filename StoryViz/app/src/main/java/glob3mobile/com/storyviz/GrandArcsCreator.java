@@ -50,7 +50,7 @@ public class GrandArcsCreator {
 
         FloatBufferBuilderFromGeodetic verticesBuilder = FloatBufferBuilderFromGeodetic.builderWithGivenCenter(planet, new Geodetic3D(center, middleHeight / 2));
 
-        int steps = 10;
+        int steps = 60;
         for (int i = 0; i <= steps; i++)
         {
             final double alpha = (double) i / steps;

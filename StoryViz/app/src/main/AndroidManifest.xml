@@ -21,7 +21,9 @@
         </activity>
         <activity
             android:name=".StoryActivity"
-            android:label="@string/title_activity_story"></activity>
+            android:label="@string/title_activity_story"
+            android:screenOrientation="landscape"
+            ></activity>
     </application>
 
 </manifest>
