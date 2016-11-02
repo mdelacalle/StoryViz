@@ -42,6 +42,7 @@ public class StoryActivity extends Activity {
     MeshRenderer _arcsRenderer = new MeshRenderer();
     private Dialog _photoContainerDialog;
     private G3MWidget_Android _widget;
+    final AtomicInteger currentPosition = new AtomicInteger(0);
 
 
     @Override
@@ -49,7 +50,6 @@ public class StoryActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_story);
 
-        final AtomicInteger currentPosition = new AtomicInteger(0);
         _session = Session.getInstance();
         _builder = new G3MBuilder_Android(this);
         _photosStory = _session.getSessionPhotos();
@@ -58,7 +58,7 @@ public class StoryActivity extends Activity {
 
         initializeGlob3();
 
-        final G3MWidget_Android _widget = _builder.createWidget();
+        _widget = _builder.createWidget();
         Log.e("Num photos", ":" + _photosStory.size());
 
         RelativeLayout g3mLayout = (RelativeLayout) findViewById(R.id.g3m);
@@ -116,11 +116,44 @@ public class StoryActivity extends Activity {
 
     }
 
+    /**
+     * This method goes to the position stored in the photo object
+     * The position is corrected to set the camera in a position where you can see
+     * the POI and the photo at same time.
+     * TODO: See things that can be a parameter. Change the animation depending the distance. ISSUE 6
+     *
+     * @param currentPicture the position of the picture on the Array.
+     */
     public void goToPositionAndUpdateDialog(int currentPicture) {
+
         Geodetic3D position = _photosStory.get(currentPicture).getPosition();
-        Geodetic3D correctedPosition = new Geodetic3D(Angle.fromDegrees(position._latitude._degrees - 1d), Angle.fromDegrees(position._longitude._degrees - 0.005d), 50000);
-        _widget.getG3MWidget().setAnimatedCameraPosition(TimeInterval.fromSeconds(3), correctedPosition, Angle.fromDegrees(0), Angle.fromDegrees(-15.743281), true);
-        ScaleBitmap(_photosStory.get(0).getPath(), 30, (RelativeLayout) _photoContainerDialog.findViewById(R.id.photoContainer), _photosStory.get(0).getExifOrientation());
+
+        Geodetic3D nextPosition;
+        float cameraDistance = 0;
+        if (currentPicture < _photosStory.size() - 1) {
+            nextPosition = _photosStory.get(currentPicture + 1).getPosition();
+        } else {
+            nextPosition = _photosStory.get(0).getPosition();
+        }
+        cameraDistance = GeometryUtils.getCameraHeightForDistanceBetween(position, nextPosition);
+        Log.e("Camera distance:", "" + cameraDistance);
+        double latitudeCorrection = 0d;
+        double longitudeCorrection = 0d;
+        double pitch = 0;
+        if (cameraDistance == 50000) {
+            latitudeCorrection = 0.3d;
+            longitudeCorrection = 0.25d;
+            pitch =-60d;
+        }
+        if (cameraDistance == 5000) {
+            latitudeCorrection = 0.01d;
+            longitudeCorrection = 0.02d;
+            pitch =-75;
+        }
+        Geodetic3D correctedPosition = new Geodetic3D(Angle.fromDegrees(position._latitude._degrees - latitudeCorrection), Angle.fromDegrees(position._longitude._degrees - longitudeCorrection), cameraDistance);
+        _widget.getG3MWidget().setAnimatedCameraPosition(TimeInterval.fromSeconds(3), correctedPosition, Angle.fromDegrees(0), Angle.fromDegrees(pitch), false);
+        ScaleBitmap(_photosStory.get(currentPicture).getPath(), 35, (RelativeLayout) _photoContainerDialog.findViewById(R.id.photoContainer), _photosStory.get(currentPicture).getExifOrientation());
+        createMarkerSelected(position);
     }
 
 
@@ -181,6 +214,24 @@ public class StoryActivity extends Activity {
 
     }
 
+    Mark selectedMark;
+
+    private void createMarkerSelected(Geodetic3D position) {
+
+
+        if (selectedMark != null) {
+            _photoMarkers.removeMark(selectedMark);
+        }
+        selectedMark = new Mark( //
+                "", //
+                new URL("file:///repsol-poi-big.png", false), //
+                position, //
+                AltitudeMode.RELATIVE_TO_GROUND, 0, //
+                true, //
+                14);
+        _photoMarkers.addMark(selectedMark);
+    }
+
     /**
      * Creating the markers with pictures (in this case with logo)
      * TODO: Show photo on click
@@ -203,7 +254,7 @@ public class StoryActivity extends Activity {
      */
     private void createGrandArcs() {
 
-        GrandArcsCreator gaCreator = new GrandArcsCreator();
+        GeometryUtils gaCreator = new GeometryUtils();
 
         for (int i = 0; i < _photosStory.size(); i++) {
 
