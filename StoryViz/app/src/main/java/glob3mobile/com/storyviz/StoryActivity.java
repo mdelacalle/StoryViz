@@ -13,8 +13,6 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 
 import org.glob3.mobile.generated.AltitudeMode;
@@ -35,8 +33,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static android.view.View.GONE;
-
 public class StoryActivity extends Activity {
 
     Session _session;
@@ -45,6 +41,7 @@ public class StoryActivity extends Activity {
     MarksRenderer _photoMarkers = new MarksRenderer(false);
     MeshRenderer _arcsRenderer = new MeshRenderer();
     private Dialog _photoContainerDialog;
+    private G3MWidget_Android _widget;
 
 
     @Override
@@ -61,17 +58,17 @@ public class StoryActivity extends Activity {
 
         initializeGlob3();
 
-        final G3MWidget_Android widget = _builder.createWidget();
+        final G3MWidget_Android _widget = _builder.createWidget();
         Log.e("Num photos", ":" + _photosStory.size());
 
         RelativeLayout g3mLayout = (RelativeLayout) findViewById(R.id.g3m);
-        g3mLayout.addView(widget);
+        g3mLayout.addView(_widget);
 
         final Button startButton = (Button) findViewById(R.id.button_start);
 
         _photoContainerDialog = new Dialog(StoryActivity.this);
         WindowManager.LayoutParams wmlp = _photoContainerDialog.getWindow().getAttributes();
-        wmlp.gravity = Gravity.TOP | Gravity.LEFT;
+        wmlp.gravity = Gravity.TOP | Gravity.START;
         wmlp.x = 100;   //x position
         wmlp.y = 100;   //y position
 
@@ -84,18 +81,11 @@ public class StoryActivity extends Activity {
         startButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Geodetic3D firstPosition = _photosStory.get(0).getPosition();
 
-                Geodetic3D correctedPosition = new Geodetic3D(Angle.fromDegrees(firstPosition._latitude._degrees - 1d), Angle.fromDegrees(firstPosition._longitude._degrees - 0.005d), 50000);
-                widget.getG3MWidget().setAnimatedCameraPosition(TimeInterval.fromSeconds(3),correctedPosition,Angle.fromDegrees(0),Angle.fromDegrees(-15.743281),true);
-                startButton.setVisibility(GONE);
-                ScaleBitmap(_photosStory.get(0).getPath(), 30, (RelativeLayout) _photoContainerDialog.findViewById(R.id.photoContainer), _photosStory.get(0).getExifOrientation());
-                forwardButton.bringToFront();
-                forwardButton.findViewById(R.id.imageForward).bringToFront();
-
-
-
+                //TODO back to photos logic
+                goToPositionAndUpdateDialog(0);
                 _photoContainerDialog.show();
+                startButton.setText(getResources().getString(R.string.backToPhotos));
 
             }
         });
@@ -107,11 +97,7 @@ public class StoryActivity extends Activity {
             public void onClick(View v) {
                 _photoContainerDialog.cancel();
                 currentPosition.addAndGet(1);
-                Geodetic3D position = _photosStory.get(currentPosition.get()).getPosition();
-                widget.setAnimatedCameraPosition(position, TimeInterval.fromSeconds(4));
-                ScaleBitmap(_photosStory.get(currentPosition.get()).getPath(), 30, (RelativeLayout) _photoContainerDialog.findViewById(R.id.photoContainer), _photosStory.get(currentPosition.get()).getExifOrientation());
-                forwardButton.bringToFront();
-                forwardButton.findViewById(R.id.imageForward).bringToFront();
+                goToPositionAndUpdateDialog(currentPosition.get());
                 _photoContainerDialog.show();
             }
         });
@@ -122,25 +108,30 @@ public class StoryActivity extends Activity {
             public void onClick(View v) {
                 _photoContainerDialog.cancel();
                 currentPosition.decrementAndGet();
-                Geodetic3D position = _photosStory.get(currentPosition.get()).getPosition();
-                widget.setAnimatedCameraPosition(position, TimeInterval.fromSeconds(4));
-                ScaleBitmap(_photosStory.get(currentPosition.get()).getPath(), 30, (RelativeLayout) _photoContainerDialog.findViewById(R.id.photoContainer), _photosStory.get(currentPosition.get()).getExifOrientation());
-                backwardButton.bringToFront();
-                backwardButton.findViewById(R.id.imageBack).bringToFront();
+                goToPositionAndUpdateDialog(currentPosition.get());
                 _photoContainerDialog.show();
             }
         });
 
+
     }
+
+    public void goToPositionAndUpdateDialog(int currentPicture) {
+        Geodetic3D position = _photosStory.get(currentPicture).getPosition();
+        Geodetic3D correctedPosition = new Geodetic3D(Angle.fromDegrees(position._latitude._degrees - 1d), Angle.fromDegrees(position._longitude._degrees - 0.005d), 50000);
+        _widget.getG3MWidget().setAnimatedCameraPosition(TimeInterval.fromSeconds(3), correctedPosition, Angle.fromDegrees(0), Angle.fromDegrees(-15.743281), true);
+        ScaleBitmap(_photosStory.get(0).getPath(), 30, (RelativeLayout) _photoContainerDialog.findViewById(R.id.photoContainer), _photosStory.get(0).getExifOrientation());
+    }
+
 
     /**
      * This method scales and rotates the given image on path parameter
      * and set as background on the container
-     * @param path The image path
-     * @param scaleToUse Scale in percentage to apply to the image
-     * @param photoContainer The container
-     * @param rotation Image' exif rotation
      *
+     * @param path           The image path
+     * @param scaleToUse     Scale in percentage to apply to the image
+     * @param photoContainer The container
+     * @param rotation       Image' exif rotation
      */
     private void ScaleBitmap(String path, int scaleToUse, RelativeLayout photoContainer, int rotation) {
 
@@ -176,7 +167,6 @@ public class StoryActivity extends Activity {
 //        layerSet.addLayer(repsolLayer);
 
 
-
         final URLTemplateLayer repsolLayer = URLTemplateLayer.newMercator("https://api.mapbox.com/styles/v1/mdelacalle/cirhl4ofm000fhdm8h2l6652j/tiles/256/{z}/{x}/{y}@2x?access_token=pk.eyJ1IjoibWRlbGFjYWxsZSIsImEiOiJrZGVWbmZBIn0.v35SP2MBF-vvMPE4Q-RY_w",
                 Sector.fullSphere(), true, 2, 18, TimeInterval.fromDays(30), true, 1);
         repsolLayer.setTitle("Repsol layer");
@@ -194,7 +184,6 @@ public class StoryActivity extends Activity {
     /**
      * Creating the markers with pictures (in this case with logo)
      * TODO: Show photo on click
-     *
      */
     private void createMarkers() {
         for (Photo photo : _photosStory) {
