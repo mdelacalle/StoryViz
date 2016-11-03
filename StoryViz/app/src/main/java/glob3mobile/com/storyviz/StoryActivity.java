@@ -85,12 +85,7 @@ public class StoryActivity extends Activity {
         final RelativeLayout forwardButton = (RelativeLayout) _photoContainerDialog.findViewById(R.id.forward);
         final RelativeLayout backwardButton = (RelativeLayout) _photoContainerDialog.findViewById(R.id.back);
 
-        _photoContainerDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
-            @Override
-            public void onDismiss(DialogInterface dialog) {
-                    startButton.setVisibility(View.VISIBLE);
-            }
-        });
+
 
         startButton.setOnClickListener(new View.OnClickListener() {
             @Override
