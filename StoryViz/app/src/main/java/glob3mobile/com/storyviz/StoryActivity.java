@@ -14,7 +14,9 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.RelativeLayout;
+import android.widget.ToggleButton;
 
 import org.glob3.mobile.generated.AltitudeMode;
 import org.glob3.mobile.generated.Angle;
@@ -44,6 +46,11 @@ public class StoryActivity extends Activity {
     private Dialog _photoContainerDialog;
     private G3MWidget_Android _widget;
     final AtomicInteger currentPosition = new AtomicInteger(0);
+    private LayerSet _layerSet;
+    private String REPSOL_LAYER = "Repsol";
+    private String IMAGERY_LAYER = "Imagery";
+
+
 
 
     @Override
@@ -81,7 +88,7 @@ public class StoryActivity extends Activity {
         _photoContainerDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
             @Override
             public void onDismiss(DialogInterface dialog) {
-                startButton.setVisibility(View.VISIBLE);
+                    startButton.setVisibility(View.VISIBLE);
             }
         });
 
@@ -103,7 +110,6 @@ public class StoryActivity extends Activity {
         forwardButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 _photoContainerDialog.cancel();
                 currentPosition.addAndGet(1);
                 if(currentPosition.get() >=_photosStory.size()){
@@ -126,10 +132,24 @@ public class StoryActivity extends Activity {
                 }
                 goToPositionAndUpdateDialog(currentPosition.get());
                 _photoContainerDialog.show();
+
                 startButton.setVisibility(View.GONE);
             }
         });
 
+        ToggleButton toggle = (ToggleButton) findViewById(R.id.changeLayer);
+        toggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    _layerSet.getLayerByTitle(IMAGERY_LAYER).setEnable(true);
+                    _layerSet.getLayerByTitle(REPSOL_LAYER).setEnable(false);
+                } else {
+                    _layerSet.getLayerByTitle(IMAGERY_LAYER).setEnable(false);
+                    _layerSet.getLayerByTitle(REPSOL_LAYER).setEnable(true);
+                }
+            }
+        });
+        toggle.bringToFront();
 
     }
 
@@ -206,24 +226,28 @@ public class StoryActivity extends Activity {
     }
 
 
+
     private void initializeGlob3() {
 
-        final LayerSet layerSet = new LayerSet();
+         _layerSet =  new LayerSet();
+
+         final URLTemplateLayer imageryLayer = URLTemplateLayer.newMercator("http://b.tiles.mapbox.com/v4/bobbysud.79c006a5/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoiYm9iYnlzdWQiLCJhIjoiTi16MElIUSJ9.Clrqck--7WmHeqqvtFdYig",
+                 Sector.fullSphere(), true, 2, 18, TimeInterval.fromDays(30), true, 1);
+        imageryLayer.setTitle(IMAGERY_LAYER);
+        imageryLayer.setEnable(false);
+        _layerSet.addLayer(imageryLayer);
 
 //        final URLTemplateLayer repsolLayer = URLTemplateLayer.newMercator("https://api.mapbox.com/styles/v1/mdelacalle/cirhl4ofm000fhdm8h2l6652j/tiles/256/{z}/{x}/{y}@2x?access_token=pk.eyJ1IjoibWRlbGFjYWxsZSIsImEiOiJrZGVWbmZBIn0.v35SP2MBF-vvMPE4Q-RY_w",
 //                Sector.fullSphere(), true, 2, 18, TimeInterval.fromDays(30), true, 1);
-//        repsolLayer.setTitle("Repsol layer");
-//        repsolLayer.setEnable(true);
-//        layerSet.addLayer(repsolLayer);
 
-
-        final URLTemplateLayer repsolLayer = URLTemplateLayer.newMercator("https://api.mapbox.com/styles/v1/mdelacalle/cirhl4ofm000fhdm8h2l6652j/tiles/256/{z}/{x}/{y}@2x?access_token=pk.eyJ1IjoibWRlbGFjYWxsZSIsImEiOiJrZGVWbmZBIn0.v35SP2MBF-vvMPE4Q-RY_w",
+        final URLTemplateLayer vectorLayer = URLTemplateLayer.newMercator("https://b.tiles.mapbox.com/v4/bobbysud.lff26ajh/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoiYm9iYnlzdWQiLCJhIjoiTi16MElIUSJ9.Clrqck--7WmHeqqvtFdYig",
                 Sector.fullSphere(), true, 2, 18, TimeInterval.fromDays(30), true, 1);
-        repsolLayer.setTitle("Repsol layer");
-        repsolLayer.setEnable(true);
-        layerSet.addLayer(repsolLayer);
+
+        vectorLayer.setTitle(REPSOL_LAYER);
+        vectorLayer.setEnable(true);
+        _layerSet.addLayer(vectorLayer);
         _builder.setAtmosphere(true);
-        _builder.getPlanetRendererBuilder().setLayerSet(layerSet);
+        _builder.getPlanetRendererBuilder().setLayerSet(_layerSet);
 
         createMarkers();
         createGrandArcs();
