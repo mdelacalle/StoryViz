@@ -2,6 +2,7 @@ package glob3mobile.com.storyviz;
 
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.DialogInterface;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
@@ -77,15 +78,22 @@ public class StoryActivity extends Activity {
         final RelativeLayout forwardButton = (RelativeLayout) _photoContainerDialog.findViewById(R.id.forward);
         final RelativeLayout backwardButton = (RelativeLayout) _photoContainerDialog.findViewById(R.id.back);
 
+        _photoContainerDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                startButton.setVisibility(View.VISIBLE);
+            }
+        });
 
         startButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
                 //TODO back to photos logic
-                goToPositionAndUpdateDialog(0);
+                goToPositionAndUpdateDialog(currentPosition.get());
                 _photoContainerDialog.show();
                 startButton.setText(getResources().getString(R.string.backToPhotos));
+                startButton.setVisibility(View.GONE);
 
             }
         });
@@ -95,10 +103,15 @@ public class StoryActivity extends Activity {
         forwardButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
                 _photoContainerDialog.cancel();
                 currentPosition.addAndGet(1);
+                if(currentPosition.get() >=_photosStory.size()){
+                    currentPosition.set(0);
+                }
                 goToPositionAndUpdateDialog(currentPosition.get());
                 _photoContainerDialog.show();
+                startButton.setVisibility(View.GONE);
             }
         });
 
@@ -108,8 +121,12 @@ public class StoryActivity extends Activity {
             public void onClick(View v) {
                 _photoContainerDialog.cancel();
                 currentPosition.decrementAndGet();
+                if(currentPosition.get() < 0){
+                    currentPosition.set(_photosStory.size()-1);
+                }
                 goToPositionAndUpdateDialog(currentPosition.get());
                 _photoContainerDialog.show();
+                startButton.setVisibility(View.GONE);
             }
         });
 
