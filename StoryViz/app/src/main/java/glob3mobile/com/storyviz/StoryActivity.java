@@ -2,11 +2,11 @@ package glob3mobile.com.storyviz;
 
 import android.app.Activity;
 import android.app.Dialog;
-import android.content.DialogInterface;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.graphics.drawable.BitmapDrawable;
+import android.media.Image;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -15,6 +15,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.ToggleButton;
 
@@ -23,6 +24,8 @@ import org.glob3.mobile.generated.Angle;
 import org.glob3.mobile.generated.Geodetic3D;
 import org.glob3.mobile.generated.LayerSet;
 import org.glob3.mobile.generated.Mark;
+import org.glob3.mobile.generated.MarkTouchListener;
+import org.glob3.mobile.generated.MarkUserData;
 import org.glob3.mobile.generated.MarksRenderer;
 import org.glob3.mobile.generated.MeshRenderer;
 import org.glob3.mobile.generated.Sector;
@@ -95,8 +98,6 @@ public class StoryActivity extends Activity {
                 goToPositionAndUpdateDialog(currentPosition.get());
                 _photoContainerDialog.show();
                 startButton.setText(getResources().getString(R.string.backToPhotos));
-                startButton.setVisibility(View.GONE);
-
             }
         });
         startButton.bringToFront();
@@ -112,7 +113,6 @@ public class StoryActivity extends Activity {
                 }
                 goToPositionAndUpdateDialog(currentPosition.get());
                 _photoContainerDialog.show();
-                startButton.setVisibility(View.GONE);
             }
         });
 
@@ -128,7 +128,6 @@ public class StoryActivity extends Activity {
                 goToPositionAndUpdateDialog(currentPosition.get());
                 _photoContainerDialog.show();
 
-                startButton.setVisibility(View.GONE);
             }
         });
 
@@ -268,19 +267,49 @@ public class StoryActivity extends Activity {
         _photoMarkers.addMark(selectedMark);
     }
 
+    private class PhotoUserData extends MarkUserData{
+        String photoURL= "";
+        int position = 0;
+
+        public PhotoUserData(String photoURL, int position) {
+            this.photoURL = photoURL;
+            this.position = position;
+        }
+
+        public String getPhotoURL() {
+            return photoURL;
+        }
+
+        public void setPhotoURL(String photoURL) {
+            this.photoURL = photoURL;
+        }
+
+        public int getPosition() {
+            return position;
+        }
+
+        public void setPosition(int position) {
+            this.position = position;
+        }
+    }
+
+
     /**
      * Creating the markers with pictures (in this case with logo)
      * TODO: Show photo on click
      */
     private void createMarkers() {
+        int i = 0;
         for (Photo photo : _photosStory) {
-            _photoMarkers.addMark(new Mark( //
-                    "", //
+             _photoMarkers.addMark(new Mark(
                     new URL("file:///repsol-poi.png", false), //
                     photo.getPosition(), //
                     AltitudeMode.RELATIVE_TO_GROUND, 0, //
+                    new PhotoUserData(photo.getPath(),i),
                     true, //
-                    14));
+                    markListener,
+                    false));
+            i++;
         }
         _builder.addRenderer(_photoMarkers);
     }
@@ -302,6 +331,38 @@ public class StoryActivity extends Activity {
 
         _builder.addRenderer(_arcsRenderer);
     }
+
+
+
+    final MarkTouchListener markListener = new MarkTouchListener() {
+        @Override
+        public boolean touchedMark(final Mark mark) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    final Dialog fsc = new Dialog(StoryActivity.this,android.R.style.Theme_Black_NoTitleBar);
+                    fsc.setContentView(R.layout.photo_full_screen_dialog);
+
+                    ImageView iw = (ImageView) fsc.findViewById(R.id.photo);
+                    iw.setImageBitmap(BitmapFactory.decodeFile(((PhotoUserData)mark.getUserData()).getPhotoURL()));
+                    currentPosition.set(((PhotoUserData)mark.getUserData()).getPosition());
+
+                    ImageView closeButton = (ImageView) fsc.findViewById(R.id.closePhotoFSDialog);
+
+                    closeButton.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            fsc.dismiss();
+                        }
+                    });
+
+                    fsc.show();
+                }
+            });
+
+            return true;
+        }
+    };
 
 
 }
