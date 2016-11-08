@@ -1,8 +1,10 @@
 <resources>
     <string name="app_name">StoryViz</string>
     <string name="action_settings">Settings</string>
-    <string name="createStory">Create a story</string>
-    <string name="title_activity_story">StoryActivity</string>
+    <string name="createStory">Let\'s go!</string>
     <string name="start">Start</string>
     <string name="backToPhotos">BACK TO PHOTOS</string>
+    <string name="from">From:</string>
+    <string name="to">To:</string>
+    <string name="pickMessage">Select pictures taken between:</string>
 </resources>
